@@ -1,9 +1,9 @@
 <template>
   <div id="app">
     <div id="menu" class="hogeMenu" style="display: flex; background-color: #2d4e6f; padding: 15px;">
-      <button v-on:click="save()">SAVE</button>
-      <button v-on:click="load()">LOAD</button>
-      <button v-on:click="loadFile('test.md')">LOAD TEST FILE</button>
+      <button class="menuButton" v-on:click="save()">SAVE</button>
+      <button class="menuButton" v-on:click="load()">LOAD</button>
+      <button class="menuButton" v-on:click="loadFile('test.md')">LOAD TEST FILE</button>
     </div>
     <div class="wrap-editArea">
       <textarea class="edit-mdArea" placeholder="# Hello" :value="rawText" @input="update" :rows="rows"></textarea>
@@ -101,25 +101,20 @@ html, body {
   box-sizing: border-box;
 }
 
-/*textarea, #app div {
-  display: inline-block;
-  width: 49%;
-  height: 100%;
-  vertical-align: top;
-  box-sizing: border-box;
-  padding: 0 20px;
-}*/
 
-/*textarea {
-  border: none;
-  border-right: 1px solid #ccc;
-  resize: none;
-  outline: none;
-  background-color: #f4f9ff;
-  font-size: 14px;
-  font-family: 'Monaco', courier, monospace;
-  padding: 20px;
-}*/
+button.menuButton {
+    font-size: 1.4em;
+    font-weight: bold;
+    padding: 4;
+    background-color: #2d4e6f;
+    color: #fff;
+    border-style: none;
+}
+
+button.menuButton:hover {
+    background-color: #fff;
+    color: #2d4e6f;
+}
 
 code {
   color: #f66;
