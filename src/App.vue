@@ -3,6 +3,7 @@
     <div id="menu" class="hogeMenu" style="display: flex; background-color: #2d4e6f; padding: 15px;">
       <button v-on:click="save()">SAVE</button>
       <button v-on:click="load()">LOAD</button>
+      <button v-on:click="loadFile('test.md')">LOAD TEST FILE</button>
     </div>
     <div class="wrap-editArea">
       <textarea class="edit-mdArea" placeholder="# Hello" :value="rawText" @input="update" :rows="rows"></textarea>
@@ -15,6 +16,7 @@
 
 var marked = require('marked');
 var store = require('store')
+var axios = require('axios')
 
 export default {
   name: 'app',
@@ -26,7 +28,6 @@ export default {
   computed: {
     markedText: function () {
       var html =  marked(this.rawText, { sanitize: false })
-      // var html = hl("for(var i=0;i<10;i++)alert(i);");
       return html
     },
     rows:function(){
@@ -39,12 +40,17 @@ export default {
       this.rawText = e.target.value
     },
     save: function () {
-      store.set('rawText', this.rawText);
-
+      store.set('rawText', this.rawText)
     },
     load: function () {
-      var a = store.get('rawText')
-      this.rawText = a;
+      this.rawText = store.get('rawText')
+    },
+    loadFile: function (filename) {
+      console.log(filename);
+      axios.get('./static/md/' + filename).then((response) => {
+        this.rawText = response.data
+      }).catch((response) => {
+      });
     }
   }
 }
