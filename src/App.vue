@@ -1,41 +1,75 @@
 <template>
   <div id="app">
+    <button v-on:click="loadListFromCognito()">リロード</button>
+    <select v-model="selected">
+      <option v-for="record in records" v-bind:value="record.key">
+        {{ record.key }}
+      </option>
+    </select>
+
     <div id="menu" class="hogeMenu" style="display: flex; background-color: #2d4e6f; padding: 15px;">
-      <button class="menuButton" v-on:click="save()">SAVE</button>
-      <button class="menuButton" v-on:click="load()">LOAD</button>
-      <button class="menuButton" v-on:click="loadFile('test.md')">LOAD TEST FILE</button>
+      <button class="menuButton" v-on:click="save()">ローカルセーブ</button>
+      <button class="menuButton" v-on:click="load()">ローカルロード</button>
+      <!-- <button class="menuButton" v-on:click="loadFile('test.md')">LOAD TEST FILE</button> -->
+      <button class="menuButton" v-on:click="saveListToCognito()">Cognitoへセーブ</button>
+      <button class="menuButton" v-on:click="exec()">EXEC</button>
     </div>
     <div class="wrap-editArea">
-      <textarea class="edit-mdArea" placeholder="# Hello" :value="rawText" @input="update" :rows="rows"></textarea>
+      <!-- <textarea class="edit-mdArea" placeholder="# Hello" :value="rawText" @input="update" :rows="rows"></textarea> -->
+      <textarea class="edit-mdArea" placeholder="# Hello" v-model="rawText"></textarea>
       <div class="view-text" v-html="markedText"></div>
     </div>
   </div>
 </template>
 
 <script>
+import 'aws-sdk/dist/aws-sdk';
+const AWS = window.AWS;
+const identityPoolId = '';
 
 var marked = require('marked');
-var store = require('store')
-var axios = require('axios')
+var store = require('store');
+var axios = require('axios');
+var co = require('co');
+
+var SyncSessionToken = '';
+var DatasetSyncCount = 0;
+
+AWS.config.region = 'ap-northeast-1';
+AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+    IdentityPoolId: identityPoolId
+});
 
 export default {
   name: 'app',
   data () {
     return {
-      rawText: ''
+      rawText: '',
+      selected: 'One',
+      records: []
+    }
+  },
+  watch: {
+    selected: function (key) {
+      var value;
+      this.records.forEach(function(record){
+        if (record.key == key) {
+          value = record.value;
+        }
+      });
+      this.rawText = value;
     }
   },
   computed: {
     markedText: function () {
       var html =  marked(this.rawText, { sanitize: false })
       return html
-    },
-    rows:function(){
-        var num = this.rawText.split("\n").length;
-        return (num > 4) ? num : 4;
     }
   },
   methods: {
+    exec: function () {
+      console.log(this.records);
+    },
     update: function (e) {
       this.rawText = e.target.value
     },
@@ -50,6 +84,58 @@ export default {
       axios.get('./static/md/' + filename).then((response) => {
         this.rawText = response.data
       }).catch((response) => {
+      });
+    },
+    loadListFromCognito: function () {
+      function getRecords() {
+        return new Promise(function(resolve) {
+          var cognitosync = new AWS.CognitoSync();
+          cognitosync.listRecords({
+            DatasetName: 'FOX',
+            IdentityId: AWS.config.credentials.identityId,
+            IdentityPoolId: identityPoolId
+          }, function(err, res){
+              if(err) {
+                console.log(err);
+              } else {
+                SyncSessionToken = res.SyncSessionToken;
+                DatasetSyncCount = res.DatasetSyncCount;
+                var records = res.Records.map(function(record){
+                  return { key: record.Key ,value: record.Value };
+                });
+                resolve(records);
+              }
+          });
+        });
+      }
+      getRecords().then((response) => {
+        this.records = response;
+        this.selected = this.records[0].key;
+        this.rawText = this.records[0].value;
+      }).catch((response) => {
+      });
+    },
+
+    saveListToCognito: function () {
+      var cognitosync = new AWS.CognitoSync();
+      var params = {
+        DatasetName: 'FOX',
+        IdentityId: AWS.config.credentials.identityId,
+        IdentityPoolId: identityPoolId,
+        SyncSessionToken: SyncSessionToken,
+        RecordPatches: [{
+            Key: this.selected,
+            Op: 'replace',
+            SyncCount: DatasetSyncCount,
+            Value: this.rawText
+        }]
+      };
+      cognitosync.updateRecords(params, function(err, data) {
+        if(err){
+          console.log(err);
+        } else {
+          console.log(data);
+        }
       });
     }
   }
@@ -69,7 +155,6 @@ html, body {
   height: 100vh;
   overflow: hidden;
 }
- 
  
 .hogeMenu {
   display: flex;
