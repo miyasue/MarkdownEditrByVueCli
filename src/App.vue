@@ -7,6 +7,8 @@
       </option>
     </select>
 
+    <input v-model="newRecordName" placeholder="new record name">
+    <button v-on:click="newRecord">新規作成</button>
     <div id="menu" class="hogeMenu" style="display: flex; background-color: #2d4e6f; padding: 15px;">
       <button class="menuButton" v-on:click="save()">ローカルセーブ</button>
       <button class="menuButton" v-on:click="load()">ローカルロード</button>
@@ -44,10 +46,14 @@ export default {
   name: 'app',
   data () {
     return {
+      newRecordName: '',
       rawText: '',
       selected: 'One',
       records: []
     }
+  },
+  created: function () {
+    this.loadListFromCognito();
   },
   watch: {
     selected: function (key) {
@@ -68,7 +74,7 @@ export default {
   },
   methods: {
     exec: function () {
-      console.log(this.records);
+      this.loadListFromCognito();
     },
     update: function (e) {
       this.rawText = e.target.value
@@ -137,7 +143,34 @@ export default {
           console.log(data);
         }
       });
+    },
+
+    newRecord: function (event) {
+      console.log(this.newRecordName);
+      var cognitosync = new AWS.CognitoSync();
+      var params = {
+        DatasetName: 'FOX',
+        IdentityId: AWS.config.credentials.identityId,
+        IdentityPoolId: identityPoolId,
+        SyncSessionToken: SyncSessionToken,
+        RecordPatches: [{
+            Key: this.newRecordName,
+            Op: 'replace',
+            SyncCount: DatasetSyncCount,
+            Value: ''
+        }]
+      };
+      cognitosync.updateRecords(params, function(err, data) {
+        if(err){
+          console.log(err);
+        } else {
+          console.log(data);
+          this.newRecordName = '';
+        }
+      });
+      this.loadListFromCognito();
     }
+
   }
 }
 
