@@ -1,16 +1,14 @@
 <template>
-  <div id="app">
-    <router-view></router-view>
+  <div class="login">
+    ログイン画面
   </div>
 </template>
 
 <script>
+
 export default {
-  components: {
-  }
 }
 </script>
 
-<style>
-
+<style scoped>
 </style>
