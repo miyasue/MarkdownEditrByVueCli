@@ -1,25 +1,22 @@
 <template>
   <div id="editor">
-    <button v-on:click="loadListFromCognito()">リロード</button>
-    <select v-model="selected">
-      <option v-for="record in records" v-bind:value="record.key">
-        {{ record.key }}
-      </option>
-    </select>
-
-    <input v-model="newRecordName" placeholder="new record name">
-    <button v-on:click="newRecord">新規作成</button>
-    <div id="menu" class="hogeMenu" style="display: flex; background-color: #2d4e6f; padding: 15px;">
-      <button class="menuButton" v-on:click="save()">ローカルセーブ</button>
-      <button class="menuButton" v-on:click="load()">ローカルロード</button>
-      <!-- <button class="menuButton" v-on:click="loadFile('test.md')">LOAD TEST FILE</button> -->
-      <button class="menuButton" v-on:click="saveListToCognito()">Cognitoへセーブ</button>
-      <button class="menuButton" v-on:click="exec()">EXEC</button>
-    </div>
-    <div class="wrap-editArea">
-      <!-- <textarea class="edit-mdArea" placeholder="# Hello" :value="rawText" @input="update" :rows="rows"></textarea> -->
-      <textarea class="edit-mdArea" placeholder="# Hello" v-model="rawText"></textarea>
-      <div class="view-text" v-html="markedText"></div>
+    <div class="edit">
+      <div class="edit-list">
+        <button class="list-button" v-on:click="loadListFromCognito()">リロード</button>
+        <button class="list-button" v-on:click="saveListToCognito()">セーブ</button>
+        <input class="list-search" v-model="search">
+        <ul class="list-cell">
+          <li class="list-cell" v-for="record in filteredRecords" v-on:click="loadWithKey(record.key)">
+            {{ record.key }}
+          </li>
+        </ul>
+        <div class="new">
+          <input class="list-new-record-name"　v-model="newRecordName" placeholder="名前">
+          <button class="list-new-record-button" v-on:click="newRecord">新規作成</button>
+        </div>
+      </div>
+      <textarea class="edit-raw" placeholder="# Hello" v-model="rawText"></textarea>
+      <div class="edit-md" v-html="markedText"></div>
     </div>
   </div>
 </template>
@@ -41,35 +38,41 @@ export default {
   name: 'editor',
   data () {
     return {
+      search: '',
       newRecordName: '',
       rawText: '',
-      selected: 'One',
+      selected: '',
       records: []
     }
   },
   created: function () {
     this.loadListFromCognito();
   },
-  watch: {
-    selected: function (key) {
+  computed: {
+    markedText: function () {
+      var html =  marked(this.rawText, { sanitize: false })
+      return html
+    },
+    filteredRecords: function () {
+      var self = this
+      return self.records.filter(function (record) {
+      return record.key.indexOf(self.search) !== -1
+    })
+}
+  },
+  methods: {
+    loadWithKey: function (key) {
       var value;
       this.records.forEach(function(record){
         if (record.key == key) {
           value = record.value;
         }
       });
+      this.selected = key;
       this.rawText = value;
-    }
-  },
-  computed: {
-    markedText: function () {
-      var html =  marked(this.rawText, { sanitize: false })
-      return html
-    }
-  },
-  methods: {
+    },
     exec: function () {
-      this.loadListFromCognito();
+      console.log(self.records);
     },
     update: function (e) {
       this.rawText = e.target.value
@@ -111,8 +114,6 @@ export default {
       }
       getRecords().then((response) => {
         this.records = response;
-        this.selected = this.records[0].key;
-        this.rawText = this.records[0].value;
       }).catch((response) => {
       });
     },
@@ -172,63 +173,70 @@ export default {
 </script>
 
 <style>
-html, body {
-  margin: 0;
-  height: 100%;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-  color: #333;
-}
 
-#app {
+.edit {
+  display: flex;
   height: 100vh;
-  overflow: hidden;
 }
- 
-.hogeMenu {
-  display: flex;
-  background-color: #000;
-￼  padding: 15px;
-  display: flex !important;
-  background-color: #2d4e6f !important;
-  padding: 15px !important;
+
+.edit-list {
+  width: 10vw;
+  background-color: #a8a8ff;
 }
-.wrap-editArea {
-  display: flex;
-  width: 100%;
-  height: 100%;
-}
-.edit-mdArea {
+
+.edit-raw {
+  width: 40vw;
   border: none;
-  border-right: 1px solid #ccc;
-  resize: none;
-  outline: none;
-  background-color: #f4f9ff;
-  font-size: 14px;
-  font-family: 'Monaco', courier, monospace;
-  padding: 20px;
-  width: 50%;
-  height: 100%;
-}
-.view-text {
+  background-color: #e0e0ff;
   padding:20px;
-  box-sizing: border-box;
+  outline: 0;
 }
 
-button.menuButton {
-    font-size: 1.4em;
-    font-weight: bold;
-    padding: 4;
-    background-color: #2d4e6f;
-    color: #fff;
-    border-style: none;
+.edit-md {
+  width: 50vw;
+  background-color: #f4f4ff;
+  padding: 20px;
 }
 
-button.menuButton:hover {
-    background-color: #fff;
+button.list-button {
+    width: 100%;
     color: #2d4e6f;
+    outline: 0;
+    padding: 10px;
 }
 
-code {
-  color: #f66;
+input.list-search {
+  width: 100%;
+  padding: 0px;
 }
+
+ul.list-cell {
+    width: 100%;
+    list-style:none;
+    padding:10px;
+    background:#337fcc;
+}
+
+ul.list-cell.ui {
+    width: 100%;
+    color: #FF0000;
+}
+
+div.new {
+  width: 10vw;
+  bottom: 0;
+  position: fixed;
+}
+
+.list-new-record-name {
+  width: 90%;
+}
+
+.list-new-record-button {
+  width: 95%;
+  color: #2d4e6f;
+  outline: 0;
+  padding: 10px;
+}
+
 </style>
